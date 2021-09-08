@@ -1,0 +1,26 @@
+name: 'action-template'
+description: 'description'
+inputs:
+  input:
+    description: 'description'
+    required: false
+    default: ''
+outputs:
+  result:
+    description: "results"
+    value: "${{ steps.action.outputs.result }}"
+runs:
+  using: "composite"
+  steps:
+    - name: install cfn_nag_scan
+      id: install
+      run: |
+        echo "::group::Title"
+        echo "some message"
+        echo "::endgroup::"
+      shell: bash
+    - name: Print Output
+      id: print
+      run: |
+        echo "${{ steps.action.outputs.result }}"
+      shell: bash
