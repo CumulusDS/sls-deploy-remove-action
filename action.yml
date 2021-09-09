@@ -1,26 +1,69 @@
-name: 'action-template'
-description: 'description'
+name: 'Serverless Deploy/Remove'
+description: 'Composite Action for serverless deploy/remove commands'
 inputs:
-  input:
-    description: 'description'
+  region:
+    description: "Region to deploy to/remove from"
+    required: true
+    default: ${{ matrix.region }}
+  stage:
+    description: "The Stage being deployed/removed"
+    required: true
+    default: ${{ matrix.stage }}
+  service:
+    description: "The Service being deployed/removed"
+    required: true
+  action:
+    description: "The specified command (deploy/remove)"
+    default: "deploy"
     required: false
-    default: ''
-outputs:
-  result:
-    description: "results"
-    value: "${{ steps.action.outputs.result }}"
+  stack_policy_stages:
+    description: "Comma delimited list of stages to apply stack policy against"
+    default: "dev,prod,master"
+    required: false
+  stack_policy_file:
+    description: "Path to an optional stack policy file to be applied (deployment only!)"
+    default: ""
+    required: false
+outputs: {}
 runs:
   using: "composite"
   steps:
-    - name: install cfn_nag_scan
-      id: install
+    - name: Set git user
+      id: git-user
+      run: git config --local user.name "${GITHUB_ACTOR}"
+      shell: bash
+    - name: wait
+      id: wait
       run: |
-        echo "::group::Title"
-        echo "some message"
+        echo "::group::Wait"
+        yarn aws-cloudformation-wait-ready --region=${{ inputs.region }} --stack-name=${{ inputs.service }}-${{ inputs.stage }}
         echo "::endgroup::"
       shell: bash
-    - name: Print Output
-      id: print
+    - name: Serverless ${{ inputs.action }}
+      id: sls-action
       run: |
-        echo "${{ steps.action.outputs.result }}"
+        echo "::group::Serverless ${{ inputs.action }}"
+        yarn sls ${{ inputs.action }} --region=${{ inputs.region }} --stage=${{ inputs.stage }}
+        echo "::endgroup::"
+      shell: bash
+    - name: stack-policy
+      id: stack-policy
+      run: |
+        echo "::group::Stack Policy"
+        IFS=',' read -r -a array <<< "${{ inputs.stack_policy_stages }}"
+        if [[ "${{ inputs.action }}" == "deploy" ]]; then
+          if [[ -z "${{ inputs.stack_policy_file }}" ]]; then
+            if [[ "${array[*]}" =~ "${{ inputs.stage }}" ]]; then
+              aws cloudformation set-stack-policy --stack-name ${{ inputs.service }}-${{ inputs.stage }} \
+                --stack-policy-body file://${{ inputs.stack_policy_file }}
+            else
+              echo "Not applying stack policy - stage not valid"
+            fi
+          else
+            echo "Not applying stack policy - no stack policy file provided"
+          fi
+        else
+          echo "Not applying stack policy - action is remove"
+        fi
+        echo "::endgroup::"
       shell: bash
