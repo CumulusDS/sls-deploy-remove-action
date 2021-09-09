@@ -52,7 +52,7 @@ runs:
         echo "::group::Stack Policy"
         IFS=',' read -r -a array <<< "${{ inputs.stack_policy_stages }}"
         if [[ "${{ inputs.action }}" == "deploy" ]]; then
-          if [[ -z "${{ inputs.stack_policy_file }}" ]]; then
+          if [[ ! -z "${{ inputs.stack_policy_file }}" ]]; then
             if [[ "${array[*]}" =~ "${{ inputs.stage }}" ]]; then
               aws cloudformation set-stack-policy --stack-name ${{ inputs.service }}-${{ inputs.stage }} \
                 --stack-policy-body file://${{ inputs.stack_policy_file }}
