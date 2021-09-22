@@ -4,41 +4,71 @@
 [![PR AutoLabeler][autolabeler-badge]][autolabeler-url]
 [![Assigner][assigner-badge]][assigner-url]
 
-Description
 Composite action combining common steps preceding stack deployment or removal for deploy/deprovision workflows
 
 ### Inputs
+
 #### `region`
+
 Region to deploy to/remove from
 required: true
 default: `${{ matrix.region }}`
 
 #### `stage`
+
 The Stage being deployed/removed
 required: true
 default: `${{ matrix.stage }}`
 
 #### `service`
+
 The Service being deployed/removed
 required: true
 
 #### `action`
+
 The specified command (deploy/remove).
 required: false
 default: `deploy`
 
 #### `stack_policy_stages`
+
 Comma delimited list of stages to apply stack policy against.  This ensures that stack policy is not
 applied against undesired stacks.
 required: false
 default: "dev,prod,master"
 
 #### `stack_policy_file`
+
 Path to an optional stack policy file to be applied (deployment only!)
 required: false
 
 ### Example usage
+
+#### packaging
+
+```yaml
+      - name: serverless package
+        id: deploy
+        uses: CumulusDS/sls-deploy-remove-action@v1
+        with:
+        action: package
+          service: ${{ steps.role.outputs.service }}
+```
+
+<details><summary>##### What does this replace?</summary>
+
+```yaml
+      - name: set git user
+        run: git config --local user.name "${GITHUB_ACTOR}"
+      - name: Package
+        run: yarn sls deploy --region=${{ matrix.region }} --stage=${{ matrix.stage }}
+```
+
+</details>
+
 #### deployment
+
 ```yaml
       - name: serverless deploy
         id: deploy
@@ -49,11 +79,10 @@ required: false
 ```
 
 <details><summary>##### What does this replace?</summary>
+
 ```yaml
       - name: set git user
         run: git config --local user.name "${GITHUB_ACTOR}"
-      - name: set git user
-        run: git config --local user.name ${GITHUB_ACTOR}
       - name: Wait
         run: yarn aws-cloudformation-wait-ready --region=${{ matrix.region }} --stack-name=${{ steps.serverless.outputs.service }}-${{ matrix.stage }}
       - name: Deploy
@@ -66,6 +95,7 @@ required: false
 </details>
 
 #### removal
+
 ```yaml
       - name: serverless remove
         id: remove
@@ -77,6 +107,7 @@ required: false
 ```
 
 <details><summary>##### What does this replace?</summary>
+
 ```yaml
       - name: set git user
         run: git config --local user.name ${GITHUB_ACTOR}

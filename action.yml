@@ -13,7 +13,7 @@ inputs:
     description: "The Service being deployed/removed"
     required: true
   action:
-    description: "The specified command (deploy/remove)"
+    description: "The specified command (package/deploy/remove)"
     default: "deploy"
     required: false
   stack_policy_stages:
@@ -35,9 +35,11 @@ runs:
     - name: wait
       id: wait
       run: |
-        echo "::group::Wait"
-        yarn aws-cloudformation-wait-ready --region=${{ inputs.region }} --stack-name=${{ inputs.service }}-${{ inputs.stage }}
-        echo "::endgroup::"
+        if [[ "${{ inputs.action }}" == "deploy" ]] || [[ "${{ inputs.action }}" == "remove" ]] ; then
+          echo "::group::Wait"
+          yarn aws-cloudformation-wait-ready --region=${{ inputs.region }} --stack-name=${{ inputs.service }}-${{ inputs.stage }}
+          echo "::endgroup::"
+        fi
       shell: bash
     - name: Serverless ${{ inputs.action }}
       id: sls-action
