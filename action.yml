@@ -24,6 +24,18 @@ inputs:
     description: "Path to an optional stack policy file to be applied (deployment only!)"
     default: ""
     required: false
+  args:
+    description: "Additional deployment arguments"
+    default: ""
+    required: false
+  verbose:
+    description: "Boolean: serverless verbose deployment"
+    default: "false"
+    required: false
+  debug:
+    description: "Boolean: serverless debug deployment"
+    default: "false"
+    required: false
 outputs: {}
 runs:
   using: "composite"
@@ -32,40 +44,60 @@ runs:
       id: git-user
       run: git config --local user.name "${GITHUB_ACTOR}"
       shell: bash
-    - name: wait
-      id: wait
+    - name: Serverless Package
+      id: sls-package
+      if: inputs.action == 'package' || inputs.action == 'deploy'
       run: |
-        if [[ "${{ inputs.action }}" == "deploy" ]] || [[ "${{ inputs.action }}" == "remove" ]] ; then
-          echo "::group::Wait"
-          yarn aws-cloudformation-wait-ready --region=${{ inputs.region }} --stack-name=${{ inputs.service }}-${{ inputs.stage }}
-          echo "::endgroup::"
-        fi
+        echo "::group::Package"
+        yarn sls package --region=${{ inputs.region }} --stage=${{ inputs.stage }}
+        echo "::endgroup::"
       shell: bash
-    - name: Serverless ${{ inputs.action }}
-      id: sls-action
+    - name: Wait
+      id: wait
+      if: inputs.action == 'deploy' || inputs.action == 'remove'
       run: |
-        echo "::group::Serverless ${{ inputs.action }}"
-        yarn sls ${{ inputs.action }} --region=${{ inputs.region }} --stage=${{ inputs.stage }}
+        echo "::group::Wait"
+        yarn aws-cloudformation-wait-ready --region=${{ inputs.region }} --stack-name=${{ inputs.service }}-${{ inputs.stage }}
+        echo "::endgroup::"
+      shell: bash
+    - name: Serverless Remove
+      id: sls-remove
+      if: inputs.action == 'remove'
+      run: |
+        echo "::group::Serverless Remove"
+        yarn sls remove --region=${{ inputs.region }} --stage=${{ inputs.stage }}
+        echo "::endgroup::"
+      shell: bash
+    - name: Serverless Deploy
+      id: sls-deploy
+      if: inputs.action == 'deploy'
+      run: |
+        echo "::group::Serverless Deploy"
+        args+=(${{ inputs.args }})
+        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+          args+=(--verbose)
+        fi
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          export SLS_DEBUG=*
+        fi
+        yarn sls deploy --region=${{ inputs.region }} --stage=${{ inputs.stage }} --package=.serverless "${args[@]}"
         echo "::endgroup::"
       shell: bash
     - name: stack-policy
       id: stack-policy
+      if: inputs.action == 'deploy'
       run: |
         echo "::group::Stack Policy"
         IFS=',' read -r -a array <<< "${{ inputs.stack_policy_stages }}"
-        if [[ "${{ inputs.action }}" == "deploy" ]]; then
-          if [[ ! -z "${{ inputs.stack_policy_file }}" ]]; then
-            if [[ "${array[*]}" =~ "${{ inputs.stage }}" ]]; then
-              aws cloudformation set-stack-policy --stack-name ${{ inputs.service }}-${{ inputs.stage }} \
-                --stack-policy-body file://${{ inputs.stack_policy_file }}
-            else
-              echo "Not applying stack policy - stage not valid"
-            fi
+        if [[ ! -z "${{ inputs.stack_policy_file }}" ]]; then
+          if [[ "${array[*]}" =~ "${{ inputs.stage }}" ]]; then
+            aws cloudformation set-stack-policy --stack-name ${{ inputs.service }}-${{ inputs.stage }} \
+              --stack-policy-body file://${{ inputs.stack_policy_file }}
           else
-            echo "Not applying stack policy - no stack policy file provided"
+            echo "Not applying stack policy - stage not valid"
           fi
         else
-          echo "Not applying stack policy - action is remove"
+          echo "Not applying stack policy - no stack policy file provided"
         fi
         echo "::endgroup::"
       shell: bash
