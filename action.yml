@@ -36,6 +36,10 @@ inputs:
     description: "Boolean: serverless debug deployment"
     default: "false"
     required: false
+  upload:
+    description: "Upload packaged template artifact"
+    default: "false"
+    required: false
 outputs: {}
 runs:
   using: "composite"
@@ -101,3 +105,10 @@ runs:
         fi
         echo "::endgroup::"
       shell: bash
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      if: inputs.upload == 'true'
+      with:
+        name: serverless-template
+        path: |
+          .serverless/*.json
