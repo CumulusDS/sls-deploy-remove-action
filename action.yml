@@ -49,7 +49,14 @@ runs:
       if: inputs.action == 'package' || inputs.action == 'deploy'
       run: |
         echo "::group::Package"
-        yarn sls package --region=${{ inputs.region }} --stage=${{ inputs.stage }}
+        args+=(${{ inputs.args }})
+        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+          args+=(--verbose)
+        fi
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          export SLS_DEBUG=*
+        fi
+        yarn sls package --region=${{ inputs.region }} --stage=${{ inputs.stage }} "${args[@]}"
         echo "::endgroup::"
       shell: bash
     - name: Wait
@@ -65,7 +72,14 @@ runs:
       if: inputs.action == 'remove'
       run: |
         echo "::group::Serverless Remove"
-        yarn sls remove --region=${{ inputs.region }} --stage=${{ inputs.stage }}
+        args+=(${{ inputs.args }})
+        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+          args+=(--verbose)
+        fi
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          export SLS_DEBUG=*
+        fi
+        yarn sls remove --region=${{ inputs.region }} --stage=${{ inputs.stage }} "${args[@]}"
         echo "::endgroup::"
       shell: bash
     - name: Serverless Deploy
