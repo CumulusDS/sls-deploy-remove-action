@@ -79,7 +79,7 @@ runs:
         if [[ "${{ inputs.debug }}" == "true" ]]; then
           export SLS_DEBUG=*
         fi
-        yarn sls remove --region=${{ inputs.region }} --stage=${{ inputs.stage }} "${args[@]}"
+        SLS_DEBUG=* yarn sls remove --region=${{ inputs.region }} --stage=${{ inputs.stage }} "${args[@]}"
         echo "::endgroup::"
       shell: bash
     - name: Serverless Deploy
