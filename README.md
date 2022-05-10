@@ -43,6 +43,12 @@ default: "dev,prod,master"
 Path to an optional stack policy file to be applied (deployment only!)
 required: false
 
+#### `workDir`
+
+Working directory path to run commands from.  Appends $GITHUB_WORKSPACE.
+required: false
+default: ""
+
 ### Example usage
 
 #### packaging
